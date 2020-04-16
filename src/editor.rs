@@ -16,6 +16,12 @@ pub struct Editor {
 
 impl Editor {
     pub fn new<P: AsRef<Path>>(path: P) -> Result<Editor, Error> {
+        if !path.as_ref().exists() {
+            let mut editor = Self::new_empty();
+            editor.filename = Some(path.as_ref().to_owned());
+            return Ok(editor);
+        }
+
         let mut the_file = OpenOptions::new().read(true).write(true).open(&path)?;
 
         let mut file_contents = String::new();
