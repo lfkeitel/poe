@@ -1,12 +1,8 @@
 use std::fs::{File, OpenOptions};
 use std::io::Error;
-use std::io::{self, prelude::*, stdin, stdout, BufReader, Write};
+use std::io::{prelude::*, Write};
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
-
-use termion::event::Key;
-use termion::input::TermRead;
-use termion::raw::IntoRawMode;
 
 use crate::terminal::Terminal;
 
