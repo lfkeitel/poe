@@ -7,7 +7,7 @@ use std::str::FromStr;
 use crate::terminal::Terminal;
 
 pub struct Editor {
-    filename: PathBuf,
+    filename: Option<PathBuf>,
     newline_seq: &'static str,
     terminal: Terminal,
     contents: Vec<String>,
@@ -27,7 +27,7 @@ impl Editor {
         };
 
         Ok(Editor {
-            filename: path.as_ref().to_owned(),
+            filename: Some(path.as_ref().to_owned()),
             newline_seq: newline_char,
             terminal: Terminal::new_no_history(),
             contents: file_contents
@@ -36,6 +36,16 @@ impl Editor {
                 .collect(),
             curr_line: 0,
         })
+    }
+
+    pub fn new_empty() -> Editor {
+        Editor {
+            filename: None,
+            newline_seq: "\n",
+            terminal: Terminal::new_no_history(),
+            contents: Vec::with_capacity(10),
+            curr_line: 0,
+        }
     }
 
     pub fn run(&mut self) {
@@ -120,18 +130,22 @@ impl Editor {
         self.contents.insert(self.curr_line as usize, new_line);
     }
 
-    fn save(&self, args: &[&str]) {
+    fn save(&mut self, args: &[&str]) {
         if args.is_empty() {
-            self.save_file(&self.filename)
-        } else if let Ok(p) = PathBuf::from_str(args[1]) {
-            self.save_file(&p)
+            match &self.filename {
+                Some(f) => self.save_file(&f),
+                None => println!("No filename given"),
+            }
+        } else if let Ok(p) = PathBuf::from_str(args[0]) {
+            self.save_file(&p);
+            self.filename = Some(p);
         } else {
             println!("Invalid file name");
         }
     }
 
     fn save_file<P: AsRef<Path>>(&self, path: P) {
-        let mut the_file = match OpenOptions::new().write(true).truncate(true).open(&path) {
+        let mut the_file = match File::create(&path) {
             Ok(f) => f,
             Err(e) => {
                 println!("{}", e);
@@ -160,7 +174,10 @@ impl Editor {
     }
 
     fn metadata(&mut self) {
-        println!("File: {:?}", self.filename);
+        match &self.filename {
+            Some(f) => println!("File: {:?}", f),
+            None => println!("File: -"),
+        };
         println!("Lines: {}", self.contents.len());
         println!("Current Line: {}", self.curr_line);
     }
