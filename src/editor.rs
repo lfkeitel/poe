@@ -65,8 +65,10 @@ impl Editor {
             match cmd[0] {
                 "?" => self.print_help(),
                 "c" => self.context(&cmd[1..]),
-                "d" => self.delete_line(&cmd[1..]),
-                "e" => self.edit_mode(&cmd[1..]),
+                "d" => self.delete_line(),
+                "e" => self.edit_mode(),
+                "f" => self.find_next(&cmd[1..]),
+                "F" => self.find_prev(&cmd[1..]),
                 "i" => self.insert_down(),
                 "I" => self.insert_up(),
                 "m" => self.metadata(),
@@ -96,12 +98,25 @@ impl Editor {
         println!("     c [NUM] - Print context, defaults to 2 lines");
         println!("           d - Delete current line");
         println!("           e - Edit current line");
+        println!("    f [TEXT] - Find text below current line");
+        println!("    F [TEXT] - Find text above current line");
         println!("           i - Insert new line below current line");
         println!("           I - Insert new line above current line");
         println!("           m - Print editor data");
         println!("           q - Quit");
         println!("     p [NUM] - Print current line. If given a number, will set the current line and print it");
         println!("w [FILENAME] - Write file to FILENAME or opened file location");
+    }
+
+    fn print_curr_line(&self) {
+        println!("{}", self.contents[self.curr_line as usize]);
+    }
+
+    fn print_curr_line_with_num(&self) {
+        println!(
+            "{}: {}",
+            self.curr_line, self.contents[self.curr_line as usize]
+        );
     }
 
     fn print_line(&mut self, args: &[&str]) {
@@ -114,10 +129,10 @@ impl Editor {
             self.curr_line = self.contents.len() as u32 - 1;
         }
 
-        println!("{}", self.contents[self.curr_line as usize]);
+        self.print_curr_line();
     }
 
-    fn edit_mode(&mut self, _args: &[&str]) {
+    fn edit_mode(&mut self) {
         let edited_line = self.terminal.edit_line(
             &format!("{} # ", self.curr_line),
             &self.contents[self.curr_line as usize],
@@ -218,10 +233,7 @@ impl Editor {
             println!("{}: {}", line_num, self.contents[line_num]);
         }
 
-        println!(
-            "{}: {}",
-            self.curr_line, self.contents[self.curr_line as usize]
-        );
+        self.print_curr_line_with_num();
 
         for x in self.curr_line + 1..=context_after {
             let line_num = x as usize;
@@ -229,10 +241,49 @@ impl Editor {
         }
     }
 
-    fn delete_line(&mut self, _args: &[&str]) {
+    fn delete_line(&mut self) {
         self.contents.remove(self.curr_line as usize);
         if self.curr_line > 0 {
             self.curr_line -= 1;
         }
+    }
+
+    fn find_next(&mut self, args: &[&str]) {
+        let pattern: String = args.join(" ");
+
+        for (x, line) in self
+            .contents
+            .iter()
+            .skip((self.curr_line as usize) + 1)
+            .enumerate()
+        {
+            if line.contains(&pattern) {
+                self.curr_line += x as u32;
+                self.print_curr_line_with_num();
+                return;
+            }
+        }
+
+        println!("Pattern '{}' not found.", pattern);
+    }
+
+    fn find_prev(&mut self, args: &[&str]) {
+        let pattern: String = args.join(" ");
+
+        for (x, line) in self
+            .contents
+            .iter()
+            .rev()
+            .skip(self.contents.len() - (self.curr_line as usize))
+            .enumerate()
+        {
+            if line.contains(&pattern) {
+                self.curr_line -= (x + 1) as u32;
+                self.print_curr_line_with_num();
+                return;
+            }
+        }
+
+        println!("Pattern '{}' not found.", pattern);
     }
 }
