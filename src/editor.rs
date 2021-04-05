@@ -77,7 +77,7 @@ impl Editor {
                 "w" => self.save(&cmd[1..]),
                 _ => {
                     if let Ok(line) = cmd[0].parse::<u32>() {
-                        self.curr_line = line;
+                        self.curr_line = if line == 0 { 0 } else { line - 1 };
 
                         if self.curr_line >= self.contents.len() as u32 {
                             self.curr_line = self.contents.len() as u32 - 1;
@@ -89,7 +89,8 @@ impl Editor {
     }
 
     fn read_cmd(&mut self) -> String {
-        self.terminal.readline(&format!("{} > ", self.curr_line))
+        self.terminal
+            .readline(&format!("{} > ", self.curr_line + 1))
     }
 
     fn print_help(&mut self) {
@@ -115,7 +116,8 @@ impl Editor {
     fn print_curr_line_with_num(&self) {
         println!(
             "{}: {}",
-            self.curr_line, self.contents[self.curr_line as usize]
+            self.curr_line + 1,
+            self.contents[self.curr_line as usize]
         );
     }
 
@@ -134,7 +136,7 @@ impl Editor {
 
     fn edit_mode(&mut self) {
         let edited_line = self.terminal.edit_line(
-            &format!("{} # ", self.curr_line),
+            &format!("{} # ", self.curr_line + 1),
             &self.contents[self.curr_line as usize],
         );
         self.contents[self.curr_line as usize] = edited_line;
@@ -200,7 +202,7 @@ impl Editor {
             None => println!("File: -"),
         };
         println!("Lines: {}", self.contents.len());
-        println!("Current Line: {}", self.curr_line);
+        println!("Current Line: {}", self.curr_line + 1);
     }
 
     fn context(&mut self, args: &[&str]) {
@@ -230,14 +232,14 @@ impl Editor {
 
         for x in context_before..self.curr_line {
             let line_num = x as usize;
-            println!("{}: {}", line_num, self.contents[line_num]);
+            println!("{}: {}", line_num + 1, self.contents[line_num]);
         }
 
         self.print_curr_line_with_num();
 
         for x in self.curr_line + 1..=context_after {
             let line_num = x as usize;
-            println!("{}: {}", line_num, self.contents[line_num]);
+            println!("{}: {}", line_num + 1, self.contents[line_num]);
         }
     }
 
