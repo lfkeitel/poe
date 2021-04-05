@@ -35,7 +35,7 @@ impl Editor {
         Ok(Editor {
             filename: Some(path.as_ref().to_owned()),
             newline_seq: newline_char,
-            terminal: Terminal::new_no_history(),
+            terminal: Terminal::new(),
             contents: file_contents
                 .split(newline_char)
                 .map(|s| s.to_owned())
@@ -48,7 +48,7 @@ impl Editor {
         Editor {
             filename: None,
             newline_seq: "\n",
-            terminal: Terminal::new_no_history(),
+            terminal: Terminal::new(),
             contents: Vec::with_capacity(10),
             curr_line: 0,
         }
@@ -117,7 +117,7 @@ impl Editor {
         println!("{}", self.contents[self.curr_line as usize]);
     }
 
-    fn edit_mode(&mut self, args: &[&str]) {
+    fn edit_mode(&mut self, _args: &[&str]) {
         let edited_line = self.terminal.edit_line(
             &format!("{} # ", self.curr_line),
             &self.contents[self.curr_line as usize],
@@ -229,7 +229,7 @@ impl Editor {
         }
     }
 
-    fn delete_line(&mut self, args: &[&str]) {
+    fn delete_line(&mut self, _args: &[&str]) {
         self.contents.remove(self.curr_line as usize);
         if self.curr_line > 0 {
             self.curr_line -= 1;

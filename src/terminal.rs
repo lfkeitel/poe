@@ -1,92 +1,22 @@
-use std::fs::{File, OpenOptions};
-use std::io::{self, prelude::*, stdin, stdout, BufReader, Write};
-use std::path::{Path, PathBuf};
+use std::io::{self, stdin, stdout, Write};
 
 use termion::event::Key;
 use termion::input::TermRead;
 use termion::raw::IntoRawMode;
 
 const INPUT_BUF_SIZE: usize = 1024;
-const MAX_HISTORY_ITEMS: usize = 10000;
 
 pub struct Terminal {
     history: Vec<String>,
     history_item: usize, // Index into history
-    history_file: Option<PathBuf>,
 }
 
 impl Terminal {
-    pub fn new<P: AsRef<Path>>(history_file: P) -> Self {
+    pub fn new() -> Self {
         Terminal {
             history: Vec::with_capacity(10),
             history_item: 0,
-            history_file: Some(history_file.as_ref().to_owned()),
         }
-    }
-
-    pub fn new_no_history() -> Self {
-        Terminal {
-            history: Vec::with_capacity(10),
-            history_item: 0,
-            history_file: None,
-        }
-    }
-
-    pub fn load_history(&mut self) -> io::Result<()> {
-        let history_file = if let Some(h) = &self.history_file {
-            h
-        } else {
-            return Ok(());
-        };
-
-        let file = File::open(history_file)?;
-        let reader = BufReader::new(file);
-
-        for line in reader.lines() {
-            self.history.push(line?);
-            self.history_item += 1;
-        }
-
-        // Trim history file if needed
-        if self.history.len() > MAX_HISTORY_ITEMS {
-            self.history = self.history[self.history.len() - MAX_HISTORY_ITEMS..].to_vec();
-            self.history_item = self.history.len();
-            self.write_history_file()?;
-        }
-
-        Ok(())
-    }
-
-    fn write_history_line(&mut self, line: &str) -> io::Result<()> {
-        let history_file = if let Some(h) = &self.history_file {
-            h
-        } else {
-            return Ok(());
-        };
-
-        let mut file = OpenOptions::new().append(true).open(history_file)?;
-
-        file.write_all(line.as_bytes())?;
-        file.write_all(b"\n")?;
-
-        Ok(())
-    }
-
-    pub fn write_history_file(&mut self) -> io::Result<()> {
-        let history_file = if let Some(h) = &self.history_file {
-            h
-        } else {
-            return Ok(());
-        };
-
-        let mut file = File::create(history_file)?;
-
-        for line in self.history.iter() {
-            file.write_all(line.as_bytes())?;
-            file.write_all(b"\n")?;
-        }
-
-        Ok(())
     }
 
     #[allow(clippy::cognitive_complexity)]
@@ -483,9 +413,6 @@ impl Terminal {
 
         self.history.push(line.clone());
         self.history_item += 1;
-        if let Err(e) = self.write_history_line(&line) {
-            eprintln!("{}", e);
-        }
 
         line
     }
