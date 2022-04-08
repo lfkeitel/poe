@@ -75,6 +75,7 @@ impl Editor {
                 "q" => return,
                 "p" => self.print_line(&cmd[1..]),
                 "w" => self.save(&cmd[1..]),
+                "o" => self.open(&cmd[1..]),
                 _ => {
                     if let Ok(line) = cmd[0].parse::<u32>() {
                         self.curr_line = if line == 0 { 0 } else { line - 1 };
@@ -86,6 +87,53 @@ impl Editor {
                 }
             }
         }
+    }
+
+    fn open(&mut self, args: &[&str]) {
+        if args.is_empty() {
+            println!("Invalid file name");
+            return;
+        }
+
+        let path = match PathBuf::from_str(args[0]) {
+            Ok(p) => p,
+            _ => {
+                println!("Invalid file name");
+                return;
+            }
+        };
+
+        if !path.exists() {
+            println!("File not found");
+            return;
+        }
+
+        let mut the_file = match OpenOptions::new().read(true).write(true).open(&path) {
+            Ok(f) => f,
+            _ => {
+                println!("Invalid file name");
+                return;
+            }
+        };
+
+        let mut file_contents = String::new();
+        if the_file.read_to_string(&mut file_contents).is_err() {
+            println!("Error reading file");
+            return;
+        }
+        let newline_char = if file_contents.contains('\n') {
+            "\n"
+        } else {
+            "\r\n"
+        };
+
+        self.filename = Some(path);
+        self.newline_seq = newline_char;
+        self.contents = file_contents
+            .split(newline_char)
+            .map(|s| s.to_owned())
+            .collect();
+        self.curr_line = 0;
     }
 
     fn read_cmd(&mut self) -> String {
@@ -107,6 +155,7 @@ impl Editor {
         println!("           q - Quit");
         println!("     p [NUM] - Print current line. If given a number, will set the current line and print it");
         println!("w [FILENAME] - Write file to FILENAME or opened file location");
+        println!("o [FILENAME] - Open FILENAME");
     }
 
     fn print_curr_line(&self) {
