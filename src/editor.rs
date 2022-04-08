@@ -124,7 +124,11 @@ impl Editor {
     fn print_line(&mut self, args: &[&str]) {
         if !args.is_empty() {
             let new_line = args[0].parse().unwrap_or(self.curr_line);
-            self.curr_line = new_line;
+            self.curr_line = if new_line == 0 {
+                new_line
+            } else {
+                new_line - 1
+            };
         }
 
         if self.curr_line >= self.contents.len() as u32 {
