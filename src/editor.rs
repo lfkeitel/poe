@@ -329,7 +329,7 @@ impl Editor {
             .enumerate()
         {
             if line.contains(&pattern) {
-                self.curr_line += x as u32;
+                self.curr_line += (x + 1) as u32;
                 self.print_curr_line_with_num();
                 return;
             }
