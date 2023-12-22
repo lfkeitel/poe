@@ -75,6 +75,10 @@ impl Editor {
                 "q" => return,
                 "p" => self.print_line(&cmd[1..]),
                 "w" => self.save(&cmd[1..]),
+                "W" => {
+                    self.save(&cmd[1..]);
+                    return;
+                }
                 "o" => self.open(&cmd[1..]),
                 _ => {
                     if let Ok(line) = cmd[0].parse::<u32>() {
@@ -162,6 +166,7 @@ impl Editor {
             "p [NUM] [CON] - Print current line or line NUM with optional CON lines of context"
         );
         println!(" w [FILENAME] - Write file to FILENAME or opened file location");
+        println!(" W [FILENAME] - Write file to FILENAME or opened file location and quit");
         println!(" o [FILENAME] - Open FILENAME");
     }
 
