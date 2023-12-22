@@ -26,10 +26,10 @@ impl Editor {
 
         let mut file_contents = String::new();
         the_file.read_to_string(&mut file_contents)?;
-        let newline_char = if file_contents.contains('\n') {
-            "\n"
-        } else {
+        let newline_char = if file_contents.contains('\r') {
             "\r\n"
+        } else {
+            "\n"
         };
 
         Ok(Editor {
@@ -64,7 +64,7 @@ impl Editor {
 
             match cmd[0] {
                 "?" => self.print_help(),
-                "c" => self.context(&cmd[1..]),
+                "c" => self.context_cmd(&cmd[1..]),
                 "d" => self.delete_line(),
                 "e" => self.edit_mode(),
                 "f" => self.find_next(&cmd[1..]),
@@ -78,14 +78,19 @@ impl Editor {
                 "o" => self.open(&cmd[1..]),
                 _ => {
                     if let Ok(line) = cmd[0].parse::<u32>() {
-                        self.curr_line = if line == 0 { 0 } else { line - 1 };
-
-                        if self.curr_line >= self.contents.len() as u32 {
-                            self.curr_line = self.contents.len() as u32 - 1;
-                        }
+                        self.set_current_line(if line == 0 { 0 } else { line - 1 });
                     }
+                    self.print_context(self.curr_line, 2);
                 }
             }
+        }
+    }
+
+    fn set_current_line(&mut self, line: u32) {
+        self.curr_line = line;
+
+        if self.curr_line >= self.contents.len() as u32 {
+            self.curr_line = self.contents.len() as u32 - 1;
         }
     }
 
@@ -142,49 +147,51 @@ impl Editor {
     }
 
     fn print_help(&mut self) {
-        println!("         NUM - Set current line");
-        println!("           ? - Print this help");
-        println!("     c [NUM] - Print context, defaults to 2 lines");
-        println!("           d - Delete current line");
-        println!("           e - Edit current line");
-        println!("    f [TEXT] - Find text below current line");
-        println!("    F [TEXT] - Find text above current line");
-        println!("           i - Insert new line below current line");
-        println!("           I - Insert new line above current line");
-        println!("           m - Print editor data");
-        println!("           q - Quit");
-        println!("     p [NUM] - Print current line. If given a number, will set the current line and print it");
-        println!("w [FILENAME] - Write file to FILENAME or opened file location");
-        println!("o [FILENAME] - Open FILENAME");
+        println!("          NUM - Set current line and print 2 lines of context");
+        println!("            ? - Print this help");
+        println!("      c [NUM] - Print context, defaults to 2 lines");
+        println!("            d - Delete current line");
+        println!("            e - Edit current line");
+        println!("     f [TEXT] - Find text below current line");
+        println!("     F [TEXT] - Find text above current line");
+        println!("            i - Insert new line below current line");
+        println!("            I - Insert new line above current line");
+        println!("            m - Print editor data");
+        println!("            q - Quit");
+        println!(
+            "p [NUM] [CON] - Print current line or line NUM with optional CON lines of context"
+        );
+        println!(" w [FILENAME] - Write file to FILENAME or opened file location");
+        println!(" o [FILENAME] - Open FILENAME");
     }
 
-    fn print_curr_line(&self) {
-        println!("{}", self.contents[self.curr_line as usize]);
+    fn print_line_with_num(&self, line: u32) {
+        println!("{}: {}", line + 1, self.contents[line as usize]);
     }
 
     fn print_curr_line_with_num(&self) {
-        println!(
-            "{}: {}",
-            self.curr_line + 1,
-            self.contents[self.curr_line as usize]
-        );
+        self.print_line_with_num(self.curr_line);
     }
 
     fn print_line(&mut self, args: &[&str]) {
-        if !args.is_empty() {
+        let line_num = if args.is_empty() {
+            self.curr_line
+        } else {
             let new_line = args[0].parse().unwrap_or(self.curr_line);
-            self.curr_line = if new_line == 0 {
+            if new_line == 0 {
                 new_line
             } else {
                 new_line - 1
-            };
-        }
+            }
+        };
 
-        if self.curr_line >= self.contents.len() as u32 {
-            self.curr_line = self.contents.len() as u32 - 1;
-        }
+        let context_lines = if args.len() < 2 {
+            0
+        } else {
+            args[1].parse::<i32>().unwrap_or(0)
+        };
 
-        self.print_curr_line();
+        self.print_context(line_num, context_lines);
     }
 
     fn edit_mode(&mut self) {
@@ -258,15 +265,19 @@ impl Editor {
         println!("Current Line: {}", self.curr_line + 1);
     }
 
-    fn context(&mut self, args: &[&str]) {
+    fn context_cmd(&mut self, args: &[&str]) {
         let context_lines = if args.is_empty() {
             2
         } else {
             args[0].parse::<i32>().unwrap_or(2)
         };
 
+        self.print_context(self.curr_line, context_lines);
+    }
+
+    fn print_context(&mut self, line_num: u32, context_lines: i32) {
         let context_before = {
-            let before = self.curr_line as i32 - context_lines;
+            let before = line_num as i32 - context_lines;
             if before < 0 {
                 0
             } else {
@@ -275,7 +286,7 @@ impl Editor {
         };
 
         let context_after = {
-            let after = self.curr_line as i32 + context_lines;
+            let after = line_num as i32 + context_lines;
             if after >= self.contents.len() as i32 {
                 (after - (after - self.contents.len() as i32) - 1) as u32
             } else {
@@ -283,14 +294,14 @@ impl Editor {
             }
         };
 
-        for x in context_before..self.curr_line {
+        for x in context_before..line_num {
             let line_num = x as usize;
             println!("{}: {}", line_num + 1, self.contents[line_num]);
         }
 
-        self.print_curr_line_with_num();
+        self.print_line_with_num(line_num);
 
-        for x in self.curr_line + 1..=context_after {
+        for x in line_num + 1..=context_after {
             let line_num = x as usize;
             println!("{}: {}", line_num + 1, self.contents[line_num]);
         }
